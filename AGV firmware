@@ -1,0 +1,242 @@
+int ENA = 13;
+int IN1 = 12; 
+int IN2 = 11;
+int ENB = 10;
+int IN3 = 9;
+int IN4 = 8;
+
+int ENA2 = 7;
+int IN12 = 6; 
+int IN22 = 5;
+int ENB2 = 4;
+int IN32 = 3;
+int IN42 = 2;
+
+int a1=22;
+int a2=23;
+int a3=24;
+int a4=25;
+
+void setup() 
+{ 
+    pinMode(ENA, OUTPUT); 
+    pinMode(IN1, OUTPUT); 
+    pinMode(IN2, OUTPUT); 
+    pinMode(ENB, OUTPUT); 
+    pinMode(IN3, OUTPUT); 
+    pinMode(IN4, OUTPUT);
+
+    pinMode(ENA2, OUTPUT); 
+    pinMode(IN12, OUTPUT); 
+    pinMode(IN22, OUTPUT);
+    pinMode(ENB2, OUTPUT); 
+    pinMode(IN32, OUTPUT); 
+    pinMode(IN42, OUTPUT);
+
+    pinMode(a1, INPUT);
+    pinMode(a2, INPUT);
+    pinMode(a3, INPUT);
+    pinMode(a4, INPUT);
+} 
+
+void loop(){
+
+    int sensor_a1 = digitalRead(a1);
+    int sensor_a2 = digitalRead(a2);
+    int sensor_a3 = digitalRead(a3);
+    int sensor_a4 = digitalRead(a4);
+
+    if (sensor_a1 == LOW && sensor_a2 == HIGH && sensor_a3 == HIGH && sensor_a1 == LOW) {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 60);
+        analogWrite(ENB, 60);
+        analogWrite(ENA2, 60);
+        analogWrite(ENB2, 60);
+        delay(1);
+
+    } else if (sensor_a1 == LOW && sensor_a2 == HIGH && sensor_a3 == LOW && sensor_a4 == LOW) {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    } else if (sensor_a1 == HIGH && sensor_a2 == HIGH && sensor_a3 == LOW && sensor_a4 == LOW) {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    }  else if (sensor_a1 == HIGH && sensor_a2 == LOW && sensor_a3 == LOW && sensor_a4 == LOW) {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    }else if (sensor_a1 == HIGH && sensor_a2 == HIGH && sensor_a3 == HIGH && sensor_a4 == LOW) {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 10);
+        analogWrite(ENB, 10);
+        analogWrite(ENA2, 100);
+        analogWrite(ENB2, 100);
+        delay(1);
+
+    } else if (sensor_a1 == LOW && sensor_a2 == LOW && sensor_a3 == HIGH && sensor_a1 == LOW) {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+
+        digitalWrite(IN12, HIGH);
+        digitalWrite(IN22, LOW);
+        digitalWrite(IN32, HIGH);
+        digitalWrite(IN42, LOW);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    } else if (sensor_a1 == LOW && sensor_a2 == LOW && sensor_a3 == HIGH && sensor_a4 == HIGH) {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+        
+        digitalWrite(IN12, HIGH);
+        digitalWrite(IN22, LOW);
+        digitalWrite(IN32, HIGH);
+        digitalWrite(IN42, LOW);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    } else if (sensor_a1 == LOW && sensor_a2 == LOW && sensor_a3 == LOW && sensor_a4 == HIGH) {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+        
+        digitalWrite(IN12, HIGH);
+        digitalWrite(IN22, LOW);
+        digitalWrite(IN32, HIGH);
+        digitalWrite(IN42, LOW);
+
+        analogWrite(ENA, 200);
+        analogWrite(ENB, 200);
+        analogWrite(ENA2, 200);
+        analogWrite(ENB2, 200);
+        delay(1);
+
+    } else if (sensor_a1 == LOW && sensor_a2 == HIGH && sensor_a3 == HIGH && sensor_a1 == HIGH) {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 100);
+        analogWrite(ENB, 100);
+        analogWrite(ENA2, 10);
+        analogWrite(ENB2, 10);
+        delay(1);
+        
+    } else if (sensor_a1 == HIGH  && sensor_a2 == HIGH && sensor_a3 == HIGH && sensor_a4 == HIGH){ 
+         digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 30);
+        analogWrite(ENB, 30);
+        analogWrite(ENA2, 30);
+        analogWrite(ENB2, 30);
+        delay(500);
+
+        analogWrite(ENA, 0);
+        analogWrite(ENB, 0);
+        analogWrite(ENA2,0);
+        analogWrite(ENB2,0);
+        delay(5000);
+    }else{
+         digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+
+        digitalWrite(IN12, LOW);
+        digitalWrite(IN22, HIGH);
+        digitalWrite(IN32, LOW);
+        digitalWrite(IN42, HIGH);
+
+        analogWrite(ENA, 0);
+        analogWrite(ENB, 0);
+        analogWrite(ENA2, 0);
+        analogWrite(ENB2, 0);
+        delay(10);
+    }
+    delay(1);
+}
