@@ -1,0 +1,299 @@
+#include <Wire.h>
+#include <SparkFun_APDS9960.h> // APDS-9960 라이브러리
+#include <AccelStepper.h>       // AccelStepper 라이브러리
+
+// --- 1. APDS-9960 핀 및 객체 설정 ---
+SparkFun_APDS9960 apds = SparkFun_APDS9960();
+
+// --- 색상 감지를 위한 비례 상수 설정 ---
+const float FACTOR_RGB = 1.15;   // 기준 유지
+const float MIN_COLOR_VALUE = 10.0; // 유효성 검사 기준 유지
+
+
+// --- 2. 스테퍼 모터 핀 및 객체 설정 ---
+#define X_STEP_PIN 2
+#define X_DIR_PIN 5
+AccelStepper stepperX(AccelStepper::DRIVER, X_STEP_PIN, X_DIR_PIN);
+
+#define A_STEP_PIN 22
+#define A_DIR_PIN 23
+AccelStepper stepperA(AccelStepper::DRIVER, A_STEP_PIN, A_DIR_PIN); 
+
+#define Y_STEP_PIN 3
+#define Y_DIR_PIN 6
+AccelStepper stepperY(AccelStepper::DRIVER, Y_STEP_PIN, Y_DIR_PIN);
+
+#define Z_STEP_PIN 4
+#define Z_DIR_PIN 7
+AccelStepper stepperZ(AccelStepper::DRIVER, Z_STEP_PIN, Z_DIR_PIN);
+
+// --- 3. 적외선 센서 핀 설정 (48, 49번) ---
+#define IR_SENSOR_LEFT_PIN 48
+#define IR_SENSOR_RIGHT_PIN 49
+
+
+// --- 4. 이동 스텝 수 설정 ---
+/* Y축 기본 이동 스텝 수 (2500)*/
+const long Y_MOVE_STEPS = 10; 
+/* X축 색상별 스텝 수 */
+const long X_RED_STEPS =30;
+const long X_GREEN_STEPS = 800;
+const long X_BLUE_STEPS = 1450;
+/*Z축 이동 스텝 수*/
+const long Z_MOVE_STEPS = 2500;
+
+// 모터 속도 설정 
+#define MAX_SPEED 1000.0 
+#define ACCELERATION 1000.0 
+
+// --- 5. 변수 설정 ---
+uint16_t red_data = 0;
+uint16_t green_data = 0;
+uint16_t blue_data = 0;
+uint16_t ambient_light = 0; 
+
+// --- 보조 함수 프로토타입 ---
+bool isRedColor(uint16_t r, uint16_t g, uint16_t b);
+bool isGreenColor(uint16_t r, uint16_t g, uint16_t b);
+bool isBlueColor(uint16_t r, uint16_t g, uint16_t b);
+long getIRMoveSteps(); 
+int getIRCode(); 
+void runSingleMotorToPosition(AccelStepper& stepper, const char* axisName);
+void runTwoMotorsToPosition(AccelStepper& stepper1, AccelStepper& stepper2, const char* axisName1, const char* axisName2);
+void checkAndMoveAxis(long xSteps, const char* color, const char* colorCode, int irCode);
+
+
+// --- Setup ---
+void setup() {
+  Serial.begin(9600); 
+  Serial.println("✨ 3축 R/G/B 및 IR 센서 연동 시스템 시작 (최종 출력: D1/E2/F3)");
+
+  // APDS-9960 초기화
+  if (!apds.init()) {
+    Serial.println("❌ APDS-9960 초기화 실패! 연결을 확인하세요.");
+  } else {
+    apds.enableLightSensor(false);
+    Serial.println("✅ APDS-9960 초기화 및 컬러 센서 활성화 성공.");
+  }
+
+  // IR 센서 핀 설정
+  pinMode(IR_SENSOR_LEFT_PIN, INPUT_PULLUP); 
+  pinMode(IR_SENSOR_RIGHT_PIN, INPUT_PULLUP);
+
+  // 모터 설정
+  stepperX.setMaxSpeed(MAX_SPEED);
+  stepperX.setAcceleration(ACCELERATION);
+  
+  stepperA.setMaxSpeed(MAX_SPEED);
+  stepperA.setAcceleration(ACCELERATION);
+ 
+  stepperY.setMaxSpeed(MAX_SPEED);
+  stepperY.setAcceleration(ACCELERATION);
+  
+  stepperZ.setMaxSpeed(MAX_SPEED);
+  stepperZ.setAcceleration(ACCELERATION);
+
+  Serial.println("시스템 준비 완료. R/G/B 감지 대기 중...");
+}
+
+// --- Loop ---
+void loop() {
+  
+  if (apds.readAmbientLight(ambient_light) &&
+      apds.readRedLight(red_data) &&
+      apds.readGreenLight(green_data) &&
+      apds.readBlueLight(blue_data)) {
+
+    // --- Green 값 조정 (-10) ---
+    uint16_t adjusted_green_data = (green_data > 10) ? (green_data - 10) : 0;
+    
+    // --- IR 센서 값 읽기 및 코드 계산 ---
+    int irLeft = digitalRead(IR_SENSOR_LEFT_PIN);
+    int irRight = digitalRead(IR_SENSOR_RIGHT_PIN);
+    int irCode = getIRCode(); // 1: 미감지, 2: 1개 감지, 3: 2개 감지
+
+    // --- 시리얼 모니터 출력 (R/G/B, IR 상태) ---
+    Serial.print("Ambient: "); Serial.print(ambient_light);
+    Serial.print(" | R: "); Serial.print(red_data);
+    Serial.print(" G(Adj): "); Serial.print(adjusted_green_data); 
+    Serial.print(" B: "); Serial.print(blue_data);
+    
+    // IR 센서 상태 출력 (H/L)
+    Serial.print(" | IR 1:"); Serial.print(irLeft == HIGH ? "H" : "L"); 
+    Serial.print(" 2:"); Serial.print(irRight == HIGH ? "H" : "L"); 
+    
+    // --- R, G, B 색상 감지 및 동작 로직 ---
+    if (isRedColor(red_data, adjusted_green_data, blue_data)) {
+      // 🚩 최종 출력 포맷: D + IR 코드 (예: D1)
+      Serial.print(" | Detected: **D"); Serial.print(irCode); Serial.println("**");
+      checkAndMoveAxis(X_RED_STEPS, "RED", "D", irCode); 
+    } 
+    else if (isGreenColor(red_data, adjusted_green_data, blue_data)) {
+      // 🚩 최종 출력 포맷: E + IR 코드 (예: E2)
+      Serial.print(" | Detected: **E"); Serial.print(irCode); Serial.println("**");
+      checkAndMoveAxis(X_GREEN_STEPS, "GREEN", "E", irCode);
+    }
+    else if (isBlueColor(red_data, adjusted_green_data, blue_data)) {
+      // 🚩 최종 출력 포맷: F + IR 코드 (예: F3)
+      Serial.print(" | Detected: **F"); Serial.print(irCode); Serial.println("**");
+      checkAndMoveAxis(X_BLUE_STEPS, "BLUE", "F", irCode);
+    }
+    else {
+      Serial.println(" | Detected: None"); // 감지된 색상 없음
+    }
+  }
+  
+  delay(500); // 센서 읽기 주기
+}
+
+// --- 보조 함수 (IR 센서 코드 반환) ---
+// 1: 검은색 미감지 (IR=HIGH), 2: 1개 감지, 3: 2개 감지 (IR=LOW)
+int getIRCode() {
+    delay(500);
+    int irLeft = digitalRead(IR_SENSOR_LEFT_PIN);
+    int irRight = digitalRead(IR_SENSOR_RIGHT_PIN);
+    
+    // LOW가 검은색 감지 (흡수)
+    if (irLeft == LOW && irRight == LOW) {
+      return 3; // 둘 다 검은색 감지
+    } else if (irLeft == LOW || irRight == LOW) {
+        return 2; // 하나만 검은색 감지
+    } else {
+        return 1; // 둘 다 검은색 미감지 (HIGH)
+    }
+}
+
+// --- 보조 함수 (IR 센서 스텝 계산) ---
+long getIRMoveSteps() {
+    int irCode = getIRCode();
+    long addedSteps = 0;
+
+    if (irCode == 3) {
+        addedSteps = 6000;
+    } else if (irCode == 2) {
+        addedSteps = 3000;
+    } else {
+        addedSteps = 0;
+    }
+    return addedSteps;
+}
+
+// --- 보조 함수 (컬러 로직 - FACTOR_RGB = 1.5) ---
+bool isRedColor(uint16_t r, uint16_t g, uint16_t b) {
+  if (r < MIN_COLOR_VALUE || g < MIN_COLOR_VALUE || b < MIN_COLOR_VALUE) return false;
+  
+  if ((float)r > (float)g * FACTOR_RGB && (float)r > (float)b * FACTOR_RGB) return true;
+  return false;
+}
+
+bool isGreenColor(uint16_t r, uint16_t g, uint16_t b) {
+  if (r < MIN_COLOR_VALUE || g < MIN_COLOR_VALUE || b < MIN_COLOR_VALUE) return false;
+
+  // 1. 일반적인 Green 감지 조건 (G가 R, B보다 FACTOR_RGB(1.5)배 이상 커야 함)
+  if ((float)g > (float)r * FACTOR_RGB && (float)g > (float)b * FACTOR_RGB) {
+    
+    // 2. 추가된 로직: G가 B보다 100 이내로 크면 Green으로 인식하지 않고 false (Blue로 넘어감)
+    // G > B 이고, G - B <= 100 이면 Blue로 인식하게 하기 위함.
+    // 참고: uint16_t는 항상 양수이므로, G가 B보다 크다는 조건은 (g - b) <= 150에 내포됨.
+    /*if (g > b && (g - b) <= 150) {
+      return false; // Blue로 인식이 넘어가도록 false 반환
+    }*/
+
+    // 3. 위의 예외 조건에 걸리지 않은 순수한 Green
+    return true; 
+  }
+  
+  return false;
+}
+
+bool isBlueColor(uint16_t r, uint16_t g, uint16_t b) {
+  if (r < MIN_COLOR_VALUE || g < MIN_COLOR_VALUE || b < MIN_COLOR_VALUE) return false;
+
+  if ((float)b > (float)r * FACTOR_RGB && (float)b > (float)g * FACTOR_RGB) return true;
+  return false;
+}
+
+
+// --- 보조 함수 (단일 모터 제어) ---
+void runSingleMotorToPosition(AccelStepper& stepper, const char* axisName) {
+  while (stepper.distanceToGo() != 0) {
+    stepper.run();
+  }
+  Serial.print("      - ");
+  Serial.print(axisName);
+  Serial.println(" 축 완료.");
+}
+
+// --- 보조 함수 (Y축 및 A축 동시 제어) ---
+void runTwoMotorsToPosition(AccelStepper& stepper1, AccelStepper& stepper2, const char* axisName1, const char* axisName2) {
+  // 두 모터 중 하나라도 움직일 거리가 남아있다면 계속 실행
+  while (stepper1.distanceToGo() != 0 || stepper2.distanceToGo() != 0) { 
+    stepper1.run();
+    stepper2.run();
+  }
+  Serial.print("      - ");
+  Serial.print(axisName1);
+  Serial.print("/");
+  Serial.print(axisName2);
+  Serial.println(" 축 완료.");
+}
+
+
+/** 색상별 X축 이동 및 모든 축 순차 복귀를 처리하는 함수 */
+void checkAndMoveAxis(long xSteps, const char* color, const char* colorCode, int irCode) {
+  
+  // IR 센서 상태에 따른 Y축 추가 스텝 계산
+  long irAddedSteps = getIRMoveSteps();
+  // Y축의 최종 이동 스텝: 기본 스텝 + IR 추가 스텝
+  long totalYSteps = Y_MOVE_STEPS + irAddedSteps;
+
+  // =========================================================
+  // 1단계: X, Y/A, Z 축 순차 이동 
+  // =========================================================
+  Serial.print("    [MOVE] Final Code: "); Serial.print(colorCode); Serial.print(irCode); 
+  Serial.print(" | "); Serial.print(color); Serial.println(" 이동 시작.");
+  
+  // 이동할 스텝 값 출력
+  Serial.print("    > 1단계: X("); Serial.print(xSteps); 
+  Serial.print(") -> Y/A("); Serial.print(totalYSteps); 
+  Serial.print(") -> Z("); Serial.print(Z_MOVE_STEPS); Serial.println(") 순차 정방향 이동 중...");
+
+  // X축 이동 (단일)
+  stepperX.move(xSteps);
+  runSingleMotorToPosition(stepperX, "X"); 
+
+  // Y축 및 A축 동시 이동
+  stepperY.move(totalYSteps);
+  stepperA.move(totalYSteps); 
+  runTwoMotorsToPosition(stepperY, stepperA, "Y", "A"); 
+
+  // Z축 이동 (단일)
+  stepperZ.move(Z_MOVE_STEPS);
+  runSingleMotorToPosition(stepperZ, "Z");
+  
+  Serial.print("    > 1단계: "); Serial.print(color); Serial.println(" 이동 완료.");
+
+  // 🚩 3초 대기 
+  Serial.println("    *** 3초(3000ms) 대기 후 원상 복귀 시작... ***");
+  delay(3000); 
+
+  // =========================================================
+  // 2단계: Z, Y/A, X 축 순차 복귀 
+  // =========================================================
+  Serial.println("    > 2단계: Z -> Y/A -> X 순차 역방향 복귀 중...");
+  
+  // Z축 복귀 (단일)
+  stepperZ.move(-Z_MOVE_STEPS); 
+  runSingleMotorToPosition(stepperZ, "Z");
+
+  // Y축 및 A축 동시 복귀
+  stepperY.move(-totalYSteps);
+  stepperA.move(-totalYSteps);
+  runTwoMotorsToPosition(stepperY, stepperA, "Y", "A"); 
+
+  // X축 복귀 (단일)
+  stepperX.move(-xSteps);
+  runSingleMotorToPosition(stepperX, "X");
+  
+  Serial.println("    > 2단계: **모든 축 원상 복귀 완료!**");
+}
